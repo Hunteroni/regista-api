@@ -4,7 +4,9 @@ import fs from "fs"
 import cors from "cors"
 import axios from "axios";
 import currSeason from "./functions/serie-a/currSeason.js";
+import dotenv from "dotenv"
 
+dotenv.config()
 const app = express()
 app.use(cors())
 app.use(bodyParser.json())
@@ -88,4 +90,4 @@ app.get("/players/:slug", async (req, res) => {
 })
 
 
-app.listen(5000)
+app.listen(process.env.PORT, () => console.log(`Listening on port ${process.env.PORT}`))
