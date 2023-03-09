@@ -22,24 +22,21 @@ export const getResults = async (req, res) => {
             const awaySlug = splittedAwaySlug[splittedAwaySlug.length - 1];
             return ({
                 match_id: v.match_id,
-                slug: `${homeSlug}-${awaySlug}-${v.match_id}`,
+                slug_id: `${homeSlug}-${awaySlug}-${v.match_id}`,
                 date: v.date_time,
-                match_day_title: v.match_day_title,
                 minutes_played: v.minutes_played,
                 live_timing: v.live_timing,
                 match_status: v.match_status,
-                home_coach_image: v.home_coach_image,
-                home_coach_name: v.home_coach_name,
-                home_coach_surname: v.home_coach_surname,
                 home_team_name: v.home_team_name,
-                home_slug: v.home_netco_id,
+                home_team_logo: v.home_team_logo,
+                home_team_abbr: v.home_team_short_name,
+                home_team_id: v.home_netco_id,
                 home_schema: v.home_schema,
                 home_goal: v.home_goal,
-                away_coach_image: v.away_coach_image,
-                away_coach_name: v.away_coach_name,
-                away_coach_surname: v.away_coach_surname,
                 away_team_name: v.away_team_name,
-                away_slug: v.away_netco_id,
+                away_team_logo: v.away_team_logo,
+                away_team_abbr: v.away_team_short_name,
+                away_team_id: v.away_netco_id,
                 away_schema: v.away_schema,
                 away_goal: v.away_goal,
             })
@@ -56,8 +53,7 @@ export const getResults = async (req, res) => {
 export const getDays = async (req, res) => {
     try {
         const { data } = await axios.get(`https://www.legaseriea.it/api/season/150052/championship/A/matchday?lang=${req.query.lang ? req.query.lang : "en"}`)
-        console.log(data)
-        const response = data.data.map(v => ({ title: v.title, match_id: v.id_category, status: v.category_status == "TO BE PLAYED" ? false : true }))
+        const response = data.data.map(v => ({ title: v.title, match_day_id: v.id_category, played: v.category_status == "TO BE PLAYED" ? false : true }))
         return res.send({ status: true, data: response })
     }
     catch (err) {
