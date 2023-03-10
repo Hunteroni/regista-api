@@ -52,4 +52,23 @@ db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='countries'",
     }
 });
 
+db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='tokens'", (err, row) => {
+    if (err) {
+        console.error(err.message);
+    }
+    if (!row) {
+        // If the table doesn't exist, create it
+        db.run('CREATE TABLE tokens (id varchar(255) PRIMARY KEY, ip varchar(255) NOT NULL);', (err) => {
+            if (err) {
+                console.error(err.message);
+            }
+            else {
+                console.log('Table tokens created created, see documentation on how to generate authorization tokens');
+            }
+        });
+    } else {
+        console.log('Table found: tokens, inherted old values');
+    }
+});
+
 export default db
