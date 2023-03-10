@@ -1,6 +1,6 @@
 //Basic authentication logic, consider using your own authentication methods
 import db from "../db/conn.js";
-import {v4 as uuidv4} from "uuid"
+import { v4 as uuidv4 } from "uuid"
 
 export const checkAuthorization = async (req, res) => {
     const { ip } = req.query
@@ -15,10 +15,18 @@ export const checkAuthorization = async (req, res) => {
             }
         })
     })
-    return res.send({
-        status: true,
-        token: response.id
-    })
+    if (response) {
+        return res.send({
+            status: true,
+            token: response.id
+        })
+    }
+    else {
+        return res.send({
+            status: false
+        })
+    }
+
 }
 
 export const deleteAuthorization = async (req, res) => {
