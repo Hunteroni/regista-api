@@ -84,29 +84,18 @@ export const getStandings = async (req, res) => {
     try {
         const { data } = await axios.get(`https://www.legaseriea.it/api/stats/live/Classificacompleta?CAMPIONATO=A&STAGIONE=${seasonYear}&TURNO=UNICO&GIRONE=UNI`)
         const response = data.data.map(v => ({
+            id: v.CODSQUADRA,
             name: v.Nome,
-            completeName: v.NomeCompleto,
             abbreviation: v.NomeSintetico,
-            slug: v.CODSQUADRA,
+            played: v.Giocate,
+            logo: v.team_image,
             draw: v.Pareggiate,
-            drawHome: v.PareggiateCasa,
-            drawAway: v.PareggiateFuori,
             lost: v.Perse,
-            lostHome: v.PerseCasa,
-            lostAway: v.PerseFuori,
             won: v.Vinte,
-            wonHome: v.VinteCasa,
-            wonAway: v.VinteFuori,
             position: v.PosCls,
             points: v.PuntiCls,
-            pointsHome: v.PuntiClsCasa,
-            pointsAway: v.PuntiClsFuori,
             goalsFor: v.RETIFATTE,
-            goalsForHome: v.RetiFatteCasa,
-            goalsForAway: v.RetiFatteFuori,
             goalsAgainst: v.RETISUBITE,
-            goalsAgainstHome: v.RetiFatteCasa,
-            goalsAgainstAway: v.RetiFatteFuori,
 
         }))
         return res.send({ status: true, data: response })

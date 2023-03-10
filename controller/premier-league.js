@@ -83,7 +83,7 @@ const retrieveTeamLogo = async (id) => {
                 }
             });
         });
-        return data ? data.endpoint : null;
+        return data ? `https:${data.endpoint}` : null;
     } catch (error) {
         console.log(error);
         return null;
@@ -213,5 +213,79 @@ export const getPlayers = async (req, res) => {
 
 export const getStandings = async (req, res) => {
     const { data } = await instance.get("https://www.premierleague.com/tables")
-    res.send(data)
+    const $ = cheerio.load(data)
+
+    const response = await new Promise(async (res, rej) => {
+        const response = []
+        const promises = []
+
+        $(".tableBodyContainer tr").each((index, element) => {
+            if ($(element).attr("class") == "expandable") return
+
+            const team_id = parseInt($(element).attr("data-filtered-table-row-abbr"))
+            let data = {
+                id: team_id,
+                name: "",
+                abbreviation: "",
+                logo: null,
+                played: 0,
+                draw: 0,
+                lost: 0,
+                won: 0,
+                position: 1,
+                points: 0,
+                goalsFor: 0,
+                goalsAgainst: 0
+            }
+
+            let td = $(element).find(".long")
+            data.name = td.text()
+            td = $(element).find(".short")
+            data.abbreviation = td.text()
+            td = $(element).find(".points")
+            data.points = parseInt(td.text())
+
+            $(element).find("td").each((index, column) => {
+                switch (index) {
+                    case 1:
+                        const pos = $(column).find(".value").text()
+                        data.position = parseInt(pos)
+                        break
+                    case 3:
+                        data.played = parseInt($(column).text())
+                        break
+                    case 4:
+                        data.won = parseInt($(column).text())
+                        break
+                    case 5:
+                        data.draw = parseInt($(column).text())
+                        break
+                    case 6:
+                        data.lost = parseInt($(column).text())
+                        break
+                    case 7:
+                        data.goalsFor = parseInt($(column).text())
+                        break
+                    case 8:
+                        data.goalsAgainst = parseInt($(column).text())
+                        break
+                }
+            })
+
+            response.push(data)
+            promises.push(retrieveTeamLogo(team_id))
+        })
+
+        // Wait for all logo promises to complete
+        const logos = await Promise.all(promises)
+
+        // Assign logos to data objects
+        response.forEach((data, index) => {
+            data.logo = logos[index]
+        })
+
+        res(response)
+    })
+
+    res.send(response)
 }
