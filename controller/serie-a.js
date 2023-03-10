@@ -12,6 +12,22 @@ const currSeason = () => {
     }
 }
 
+function capitalizeName(name) {
+    // Convert the name to all lowercase
+    const lowerCaseName = name.toLowerCase();
+
+    // Get the first character of the name and capitalize it
+    const firstChar = lowerCaseName.charAt(0).toUpperCase();
+
+    // Get the rest of the characters in the name
+    const restOfName = lowerCaseName.slice(1);
+
+    // Combine the first character and the rest of the name
+    const capitalized = firstChar + restOfName;
+
+    return capitalized;
+}
+
 export const getResults = async (req, res) => {
     try {
         const genericData = await axios.get(`https://www.legaseriea.it/api/stats/live/match?extra_link&order=oldest&lang=it&match_day_id=${req.params.id}`)
@@ -101,7 +117,6 @@ export const getStandings = async (req, res) => {
     }
 
 }
-
 export const getPlayers = async (req, res) => {
     try {
         const { data } = await axios.get(`https://www.legaseriea.it/api/team/${req.params.slug}/players`)
@@ -122,7 +137,7 @@ export const getPlayers = async (req, res) => {
                     role = "GK"
                     break;
             }
-            data.data[key].forEach(v => { response.push({ name: v.name, surname: v.surname, birthday: v.birth_day, image: v.head_shot, nationality: v.nationality, role: role, teamName: v.team_name, teamLogo: v.team_logo }) })
+            data.data[key].forEach(v => { response.push({ name: capitalizeName(v.name), surname: capitalizeName(v.surname), image: v.head_shot, nationality: v.nationality, role: role }) })
         }
         res.send({ status: true, data: response })
     }

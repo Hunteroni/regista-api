@@ -154,3 +154,64 @@ export const updateLogos = async (req, res) => {
 
     res.send({ status: status })
 }
+const parseRole = (role) => {
+    switch (role) {
+        case "Goalkeeper":
+            return "GK"
+            break
+        case "Defender":
+            return "D"
+            break;
+        case "Midfielder":
+            return "M"
+            break;
+        case "Forward":
+            return "F"
+            break;
+    }
+}
+
+const retrieveIso2Nationality = async () => {
+    const data = await new Promise((res, rej) => {
+        db.all("SELECT alpha_2_code, en_short_name FROM countries", [], (err, row) => {
+            if (err) {
+                rej(err)
+            }
+            else {
+                res(row)
+            }
+        })
+    })
+    return data
+}
+export const getPlayers = async (req, res) => {
+    const index = 1
+    const { data } = await instance.get(`https://www.premierleague.com/clubs/${index}/club/squad`)
+    const $ = cheerio.load(data)
+    const nationalities = await retrieveIso2Nationality()
+    console.log(nationalities)
+    const resp = []
+
+    $('.squadListContainer li a').each((index, element) => {
+        const src = $(element).find(".statCardImg").attr("data-player")
+        const number = $(element).find('.number').text().trim();
+        const fullName = $(element).find('.name').text().trim();
+        const [name, surname] = fullName.split(' ');
+        const role = parseRole($(element).find('.position').text().trim());
+        const nationality = $(element).find('.nationality .playerCountry').text().trim();
+        const natIndex = nationalities.findIndex(v => v.en_short_name == nationality)
+
+        const record = natIndex !== -1 ? nationalities[natIndex].alpha_2_code : nationality
+
+        resp.push({
+            number: number, name: name, surname: surname, image: `https://resources.premierleague.com/premierleague/photos/players/110x140/${src}.png`, role: role, nationality: record
+        })
+    });
+    return res.send({ status: true, data: resp })
+}
+
+
+export const getStandings = async (req, res) => {
+    const { data } = await instance.get("https://www.premierleague.com/tables")
+    res.send(data)
+}
