@@ -12,25 +12,26 @@ export default instance;
 
 export const getDays = async (req, res) => {
     try {
-        const { data } = await instance.get("https://www.premierleague.com/match/74911");
-        const $ = cheerio.load(data);
+        const data = await new Promise((resolve, reject) => {
+            db.all("SELECT * FROM pl_matchweeks", [], (err, rows) => {
+                if (!err) {
+                    resolve(rows)
+                }
+                else {
+                    reject(err)
+                }
+            })
+        })
+        const currentDate = new Date()
+        const matchweeks = data.map((element, index) => {
+            const title = element.title;
+            const match_day_id = element.id;
+            const matchWeekDays = element.matchweek_days;
 
-        const dropdownList = $('ul.dropdownList');
-        const matchweekList = dropdownList.find('li');
-
-        const currentDate = new Date();
-        const currentMonth = currentDate.getMonth();
-
-        const afterWinter = currentMonth <= 6 ? true : false
-
-        const matchweeks = matchweekList.map((index, element) => {
-            const title = $(element).find('.week').text().trim();
-            const match_day_id = parseInt($(element).find('a').attr('href').match(/matchweek\/(\d+)\//)[1]);
-            const matchWeekDays = $(element).find('time').text().trim();
 
             let played = true;
 
-
+            const afterWinter = currentDate.getMonth() < 6
             const startDate = matchWeekDays.split(' - ')[0]
             const currentYear = currentDate.getFullYear()
             const fullDateString = `${startDate} ${currentYear}`;
@@ -41,7 +42,7 @@ export const getDays = async (req, res) => {
             }
 
             return { title, match_day_id, played, };
-        }).get();
+        })
 
         res.send({ status: true, data: matchweeks });
     } catch (error) {
@@ -55,7 +56,7 @@ const switchStatus = (phase) => {
         case "F":
             return 2
             break;
-        case "U":
+        case "0":
             return 0
             break;
         default:
@@ -101,7 +102,7 @@ export const getResults = async (req, res) => {
                 match_id: v.id,
                 slug_id: v.id,
                 date: new Date(v.provisionalKickoff.millis),
-                minutes_played: v.clock.secs / 60,
+                minutes_played: v.clock ? v.clock.secs / 60 : null,
                 match_status: switchStatus(v.phase),
                 home_team_name: v.teams[0].team.name,
                 home_team_logo: home_team_logo,
@@ -117,6 +118,7 @@ export const getResults = async (req, res) => {
         }))
         res.send(response)
     } catch (error) {
+        console.log(error)
         res.status(502).send({ status: false })
     }
 }
@@ -143,7 +145,7 @@ export const updateLogos = async (req, res) => {
         const id = parseInt(href.match(/\/(\d+)\//)[1])
         const logo = await scrapeTeamLogo(id)
         try {
-            await db.run(sql, [id, logo])
+            db.run(sql, [id, logo])
             console.log(`${logo} inserted`)
         }
         catch (err) {
@@ -189,7 +191,6 @@ export const getPlayers = async (req, res) => {
     const { data } = await instance.get(`https://www.premierleague.com/clubs/${index}/club/squad`)
     const $ = cheerio.load(data)
     const nationalities = await retrieveIso2Nationality()
-    console.log(nationalities)
     const resp = []
 
     $('.squadListContainer li a').each((index, element) => {
@@ -288,4 +289,60 @@ export const getStandings = async (req, res) => {
     })
 
     res.send(response)
+}
+
+const storeData = async (id) => {
+    const { data } = await instance.get(`https://www.premierleague.com/match/${id}`)
+    const $ = cheerio.load(data);
+
+    const dropdownList = $('ul.dropdownList');
+    const matchweekList = dropdownList.find('li');
+    const matchweeks = matchweekList.map((index, element) => {
+        const title = $(element).find('.week').text().trim();
+        const match_day_id = parseInt($(element).find('a').attr('href').match(/matchweek\/(\d+)\//)[1]);
+        const matchweek_days = $(element).find('time').text().trim();
+
+        return { title, match_day_id, matchweek_days };
+    }).get();
+    let status = true
+    await new Promise((resolve, reject) => {
+        db.run("DELETE FROM pl_matchweeks", (() => {
+            resolve(true)
+        }))
+    })
+    matchweeks.forEach(async v => {
+        const dbStatus = await new Promise((resolve, reject) => {
+            db.run("INSERT INTO pl_matchweeks values (?, ?, ?)", [v.match_day_id, v.title, v.matchweek_days], (rows, err) => {
+                if (err) {
+                    reject(false)
+                }
+                else {
+                    console.log(`Inserted match week ${v.match_day_id}`)
+                    resolve(true)
+                }
+            })
+        })
+        dbStatus ? null : status = false
+    })
+    return status
+}
+
+export const updateMatchWeeks = async (req, res) => {
+    try {
+        const { data } = await instance.get("https://footballapi.pulselive.com/football/competitions?page=0&pageSize=1000&detail=2")
+        const plIndex = data.content.findIndex(v => v.id === 1.0)
+        const { id } = data.content[plIndex].compSeasons[0]
+        const fixtures = await instance.get(`https://footballapi.pulselive.com/football/fixtures?comps=1&compSeasons=${id}&page=0&pageSize=1&sort=asc&altIds=true`)
+        const firstMatchId = fixtures.data.content[0].id
+
+        const status = await storeData(firstMatchId)
+        res.send({ status: status })
+
+    }
+    catch (err) {
+        console.log(err)
+        res.status(502).send({ status: false })
+    }
+
+
 }

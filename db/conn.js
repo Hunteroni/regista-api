@@ -10,7 +10,7 @@ const db = new sqlite3.Database("./db/sqlite.db", (err) => {
         console.log("Connected to the database")
     }
 })
-// Check if the table exists
+
 db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='pl_logos'", (err, row) => {
     if (err) {
         console.error(err.message);
@@ -70,5 +70,25 @@ db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='tokens'", (e
         console.log('Table found: tokens, inherted old values');
     }
 });
+
+db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='pl_matchweeks'", (err, row) => {
+    if (err) {
+        console.error(err.message);
+    }
+    if (!row) {
+        // If the table doesn't exist, create it
+        db.run('CREATE TABLE pl_matchweeks (id int PRIMARY KEY, title varchar(255) not null, matchweek_days varchar(255) not null);', (err) => {
+            if (err) {
+                console.error(err.message);
+            }
+            else {
+                console.log('Table pl_matchweeks created created, see documentation on how to correctly load the Premier League fixtures');
+            }
+        });
+    } else {
+        console.log('Table found: pl_matchweeks, inherted old values');
+    }
+});
+
 
 export default db
